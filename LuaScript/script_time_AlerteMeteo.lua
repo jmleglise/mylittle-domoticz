@@ -1,5 +1,4 @@
---[[
- ~/domoticz/scripts/lua/script_time_AlerteMeteo.lua
+--[[  ~/domoticz/scripts/lua/script_time_AlerteMeteo.lua
 
 Meteo France vigilance from domogeek API
  Information from Meteo France is updated everyday at 6AM and 4PM
@@ -7,7 +6,7 @@ Meteo France vigilance from domogeek API
 ]]--
 
 package.path = package.path .. ';' .. '/home/pi/domoticz/scripts/lua/?.lua'
-My = require('My_Config')
+require('My_Config')
 
 local EMAILTO=MY_CONFIG_EMAIL -- defined in My_Config.lua
 
