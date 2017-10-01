@@ -1,0 +1,39 @@
+--[[
+~/domoticz/scripts/lua/script_time_AlertFreeze.lua
+
+Test toutes les 5 minutes
+-pas de temperature depuis 1h : Alerte = N/A
+-temperature<3 : Alerte = 4
+-l'alerte gel inchangé depuis 5h : alerte = 1 NO Freeze   (= pas de gel détecté depuis 5h)
+
+REQUIRE :
+Virtual Device/ Type General / Subtype Alert /	name Gel
+
+]]--
+
+package.path = package.path .. ';' .. '/home/pi/domoticz/scripts/lua/?.lua'
+My = require('My_Library')
+
+commandArray = {}
+time = os.date("*t")
+
+local idx = '80' -- Device ID (Type Alert on virtual hardware)
+--local sValue = 'Risque : GEL '
+--local nValue = 4  --  0 grey / 1 green / 2 yellow / 3 orange / 4 red
+
+-- Test pas de relevé temp > 1h  => KO
+-- Temp <3°  => Alerte
+-- Pas d'alerte depuis 5h => plus d'alerte
+
+if (time.min % 5) == 0 then
+    if My.Time_Difference(otherdevices_lastupdate['Sonde Perron']) > 60 * 60 then
+        commandArray[#commandArray + 1] = { ['UpdateDevice'] = idx .. '|0|0-N/A' }
+    elseif tonumber(otherdevices_svalues['Sonde Perron']) < 3 then
+        commandArray[#commandArray + 1] = { ['UpdateDevice'] = idx .. '|4|4-Alert Freeze' }
+    elseif My.Time_Difference(otherdevices_lastupdate['Alerte Gel']) > 5 * 60 * 60 then
+        -- No freeze since 5 hour
+        commandArray[#commandArray + 1] = { ['UpdateDevice'] = idx .. '|1|1-No Freeze' }
+    end
+end
+return commandArray
+
