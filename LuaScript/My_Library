@@ -1,0 +1,142 @@
+--[[
+package.path = package.path .. ';' .. '/home/pi/domoticz/scripts/lua/?.lua'
+My = require('My_Library')
+
+Speak(text, volume, sound)
+volume : 'fort' or 'faible'
+sound : optional . an mp3 file
+use izsynth : http://www.domoticz.com/wiki/IzSynth
+
+Check if file exist.
+   if not My.File_Exists(LogFile) then
+
+Get UserVar and Print when missing
+Get value of a user variable, but when the user variable not exist the function prints print (". User variable not set for : " .. UserVar) to the log.
+When you use this function for all the variables users who copy your script gets in logging a message which variables they must make.
+
+LogFile        = My.Get_User_Var("SUN_LogFile")
+
+Get the X value of a device
+5 in this example can you change in the number of the value.
+my Wind meter gives: 207.00;SSW;9;18;16.4;16.4 so I need fift value for temperature
+
+Variable      = My.Get_Value(otherdevices_svalues[DeviceName],5)   
+
+Round numbers.
+My.Round(ValueThatNeedsToRounded,1)
+
+Time_Differences
+The example below gave to difference between now and the time that a devices is last changed in minutes
+
+TDiff = My.Round(My.Time_Diff(os.time(),otherdevices_lastupdate[DeviceManual])/60,0)
+
+]]--
+
+
+
+-------------
+
+local My = {}
+
+function My.Time_Difference(timestamp)
+    y, m, d, H, M, S = timestamp:match("(%d+)-(%d+)-(%d+) (%d+):(%d+):(%d+)")
+    difference = os.difftime(os.time(), os.time { year = y, month = m, day = d, hour = H, min = M, sec = S })
+    return difference
+end
+
+function My.Speak(text, volume, sound)
+    vol = 85
+    if volume == "fort" then
+        vol = 100
+    end
+    if volume == "faible" then
+        vol = 75
+    end
+
+    if string.len(text) > 60 then
+        -- w pour écraser
+        cmd = "izsynth -t \"" .. text .. "\" -T 1 -w -W " .. vol .. " -d alsa:device=hw=0.0 "
+    else
+        cmd = "izsynth -t \"" .. text .. "\" -T 1 -W " .. vol .. " -d alsa:device=hw=0.0 "
+    end
+
+    if sound ~= nil
+    then
+        cmd = cmd .. " ; sleep 4 ; mpg321 -g 50 /home/pi/domoticz/scripts/lua/" .. sound .. ".mp3 &"
+    else
+        cmd = cmd .. "&"
+    end
+    os.execute(cmd)
+    print(cmd)
+end
+
+function My.Get_User_Var(UserVar)
+    Waarde = uservariables[UserVar]
+    if Waarde == nil then
+        print(".  User variable not set for : " .. UserVar)
+        UserVarErr = UserVarErr + 1
+    end
+    return Waarde
+end
+
+function My.File_Exists(file)
+    local f = io.open(file, "rb")
+    if f then
+        f:close()
+    end
+    return f ~= nil
+end
+
+function My.Round(num, idp)
+    local mult = 10 ^ (idp or 0)
+    return math.floor(num * mult + 0.5) / mult
+end
+
+function My.Get_Value(Text, GetNr)
+    Part = 1
+    for match in (Text .. ';'):gmatch("(.-)" .. ';') do
+        if Part == GetNr then
+            MyValue = tonumber(match)
+        end
+        Part = Part + 1
+    end
+    return MyValue
+end
+
+-- replace the last character
+function My.Enum_Clear(Text)
+    a = string.len(Text)
+    b = string.sub(Text, a, a)
+    if b == "," or b == " " then
+        Text = string.sub(Text, 1, a - 1)
+    end
+    a = string.len(Text)
+    b = string.sub(Text, a, a)
+    if b == "," or b == " " then
+        Text = string.sub(Text, 1, a - 1)
+    end
+    return Text
+end
+
+function My.Conv_Time(TimeX)
+    year = string.sub(TimeX, 1, 4)
+    month = string.sub(TimeX, 6, 7)
+    day = string.sub(TimeX, 9, 10)
+    hour = string.sub(TimeX, 12, 13)
+    minutes = string.sub(TimeX, 15, 16)
+    seconds = string.sub(TimeX, 18, 19)
+    ResTime = os.time { year = year, month = month, day = day, hour = hour, min = minutes, sec = seconds }
+    return ResTime
+end
+
+function My.Time_Diff(Time1, Time2)
+    if string.len(Time1) > 12 then
+        Time1 = My.Conv_Time(Time1)
+    end
+    if string.len(Time2) > 12 then
+        Time2 = My.Conv_Time(Time2)
+    end
+    ResTime = os.difftime(Time1, Time2)
+    return ResTime
+end
+return My
