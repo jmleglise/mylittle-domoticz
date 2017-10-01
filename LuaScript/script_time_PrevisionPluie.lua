@@ -1,7 +1,6 @@
 --[[   
 ~/domoticz/scripts/lua/script_time_PrevisionPluie.lua
 
-LIMIT : 
 --- FOR FRENCH CITIES ONLY ---
 
 OBJET :
@@ -40,21 +39,21 @@ Annonce vocale : seulement une annonce vocale , toutes les 3heures.
 
 ]]--
 ---------------------------------------------------------------------------
---Fonctions
+-- Fonctions
 ---------------------------------------------------------------------------
 package.path = package.path .. ';' .. '/home/pi/domoticz/scripts/lua/?.lua'
 My = require('My_Library')
 require('My_Config')
----------------------------------------------------------------------------
------- Paramètres à éditer
----------------------------------------------------------------------------
+
+--------------------------------------------------------------------------
+-- Paramètres à éditer
+--------------------------------------------------------------------------
 local CITY_CODE = 920630  -- Le code de votre ville est l'ID retourné par cette URL : http://www.meteofrance.com/mf3-rpc-portlet/rest/lieu/facet/pluie/search/nom de votre ville
 local RAIN_ALERT_IDX = 137  -- renseigner l'id du device alert associé si souhaité, sinon nil
 local NOTIFICATION_PUSH = true
 local NOTIFICATION_MAIL = true
 local NOTIFICATION_VOCAL = true
-local EMAIL = MY_CONFIG_EMAIL  -- From My_Config.lua file  :  adresse mail, séparées par ; si plusieurs
-
+local EMAIL = MY_CONFIG_EMAIL  -- adresse mail, séparées par ; si plusieurs
 
 ---------------------------------------------------------------------------
 commandArray = {}
