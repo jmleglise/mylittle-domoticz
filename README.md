@@ -2,8 +2,8 @@
 A bunch of script for Domoticz
 
 
- 	<li> My_Config.lua 	
-	My_Library 	                      A lot of functions , included the nice TextToSpeak function.
+ 	* My_Config.lua 	
+	* My_Library 	                      A lot of functions , included the nice TextToSpeak function.
 	lib_jourFerie.lua 	              Calculate the public holiday 
 	script_device_Alarm_NightnDays.lua 	 
 	script_device_ChangeMode.lua 	    Automaticaly set each day, between Day Off, Vacation, working Day. 
