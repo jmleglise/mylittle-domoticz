@@ -2,7 +2,7 @@
 A bunch of script for Domoticz
 
 
- 	My_Config.lua 	
+ 	<li> My_Config.lua 	
 	My_Library 	                      A lot of functions , included the nice TextToSpeak function.
 	lib_jourFerie.lua 	              Calculate the public holiday 
 	script_device_Alarm_NightnDays.lua 	 
