@@ -9,6 +9,7 @@ A bunch of script for Domoticz
 	* script_device_Alarm_NightnDays.lua  	Alarm System 	 
 	* script_device_ChangeMode.lua 	    	Automaticaly set each day, between Day Off, Vacation, working Day. 
 	* script_device_MailBox.lua 	    	Do you receive PostMail ? 
+	* script_device_DirectSpeech.lua	The simplest way to trigger manually the vocal synthesis 
 
 	* script_time_AlertFreeze           	Estimate if there may be Ice outside
 	* script_time_AlerteMeteo.lua
