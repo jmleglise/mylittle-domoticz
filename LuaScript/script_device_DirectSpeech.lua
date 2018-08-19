@@ -1,6 +1,9 @@
---[[ Script : ~/domoticz/scripts/lua/script_device_DirectSpeech.lua
+--[[ Install in : ~/domoticz/scripts/lua/script_device_DirectSpeech.lua
 
-Text To Speak the text of A device Text. => Change the text of the device and the TTS system will speak.
+Source : https://github.com/jmleglise/mylittle-domoticz/
+
+Manually Trigger the Vocal synthesis with the Text content of a Virtual Text Device.
+=> Change the text of the device and the TTS system will speak.
 
 REQUIRE :
 A Virtual device of type "Text" and of name 'Direct Speech'
