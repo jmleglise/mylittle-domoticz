@@ -2,16 +2,16 @@
 Script : ~/domoticz/scripts/lua/script_time_setTodayMode.lua
 
 
-Changement du switch Mode:
-manuel, away  => fixe la uservariable
-auto => execute férie
-
-à  minuit : si en auto , execute férié, calcule la uservariable
-
-
 Calcule le type de journée :
 si férié ou Week End => DayOff
 Si Away : pas de modification
+
+
+Changement du switch Mode:
+manuel, away  => fixe la uservariable
+Si auto => execute férie à  minuit. Set la uservariable mode
+
+
 
 Require:
 uservariable : mode, string
@@ -53,4 +53,4 @@ if (os.date("%Y-%m-%d") ~= dateLastUpdateMode) then -- Une seule execution par j
 	end
 end
 
-return commandArray
+return commandArray 
