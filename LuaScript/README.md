@@ -3,13 +3,14 @@
 	* My_Config.lua 	
 	* My_Library 	                      	A lot of functions , included the nice TextToSpeak function.
 	* lib_jourFerie.lua 	              	Calculate the public holiday 
+	
   	* BlindForGlassRood                   dzEvents script - Manage Blind depending of the Sun position
  	* SolarData                           dzEvents script - Usefull data on the sun, for your location
+
 	* script_device_Alarm_NightnDays.lua  Alarm System 	 
 	* script_device_ChangeMode.lua 	    	Automaticaly set each day, between Day Off, Vacation, working Day. 
 	* script_device_MailBox.lua 	    	Do you receive PostMail ? 
 	* script_device_DirectSpeech.lua	The simplest way to trigger manually the vocal synthesis 
-
 	* script_time_AlertFreeze           	Estimate if there may be Ice outside
 	* script_time_AlerteMeteo.lua
 	* script_time_Alive.lua             	Check the device. (For battery issue for example)
@@ -21,4 +22,5 @@
 	* script_time_PrevisionPluie.lua    	Vocal announcement of the prevision of rain in the next hour.
 	* script_time_SimulationPresence.lua
 	* script_time_setTodayMode.lua 
-	* siren.mp3
+	
+	* siren.mp3				used by the alarm system
