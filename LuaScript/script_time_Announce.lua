@@ -16,7 +16,7 @@ in the evening :
 REQUIRE :
 All my other script to manage these variable:
 
-uservariable['mode']	
+uservariable['mode']
 otherdevices['Mode']
 uservariable['goodMorning']
 otherdevices_svalues['Sonde Perron']
@@ -32,9 +32,15 @@ package.path = package.path .. ';' .. '/home/pi/domoticz/scripts/lua/?.lua'
 My = require('My_Library')
 require('My_Config')
 
+
+
+
+latitude=MY_LATITUDE
+longitude=MY_LONGITUDE
+
 local city = "Paris"
 local wuAPIkey = WU_API_KEY -- From My_Config.lua file. Your Weather Underground API Key
-
+local dsAPIkey = DS_API_KEY
 
 local eventTable = {   --Exemple
     ["l'anniversaire de jean-claude"] = "24/01/1900",
@@ -42,8 +48,9 @@ local eventTable = {   --Exemple
 }
 
 
+
 function morning()
-    local sentence = "Bonjour, nous sommes le " .. tonumber(os.date("%d")) .. "."  -- Good morning, today we are the ..
+    local sentence = "Bonjour, nous sommes le " .. tonumber(os.date("%d")) .. ". "  -- Good morning, today we are the ..
     liaison = " C'est "
     for event, date in pairs(eventTable) do
         if os.date("%d/%m") == date:sub(1, 5)
@@ -65,17 +72,37 @@ function morning()
     then
         str = otherdevices_svalues['Sonde Perron']
         sentence = sentence .. "La température extérieure est de " .. tostring(My.Round(str, 0)) .. " degré." -- outdoor temperature
+    else    
+        sentence = sentence .. "La sonde extérieure est arrêtée." -- outdoor temperature
+
     end
     ------------------ WEATHER FORECAST ------------------
     json = (loadfile "/home/pi/domoticz/scripts/lua/JSON.lua")()
-    local file = assert(io.popen('curl http://api.wunderground.com/api/' .. wuAPIkey .. '/forecast/lang:FR/q/France/' .. city .. '.json'))
+--    local file = assert(io.popen('curl http://api.wunderground.com/api/' .. wuAPIkey .. '/forecast/lang:FR/q/France/' .. city .. '.json'))
+
+
+    local file = assert(io.popen('curl "https://api.darksky.net/forecast/' .. dsAPIkey .. '/'..latitude..','..longitude..'?lang=fr&units=ca"'))
+      
     local raw = file:read('*all')
     file:close()
 
     local jsonForecast = json:decode(raw)
-    prevision = jsonForecast.forecast.txt_forecast.forecastday[1].fcttext_metric  -- complete prevision
-    --prevision=jsonForecast.forecast.simpleforecast.forecastday[1].conditions  -- small forecast
+ prevision = jsonForecast.hourly.summary  --résume les 12 prochaines heures  (avec 49 heures de data)
+ --daily.summary    résume la semaine avec détail pour 8 jours.
+ 
+-- pluie : parcourir hourly.data[0..8h].precipProbability   pour savoir l'heure
+ 
+-- daily.data[0].precipProbability
+ 
+ -- print(prevision)
+ 
+ 
+ 
+-- prevision = jsonForecast.forecast.txt_forecast.forecastday[1].fcttext_metric  -- complete prevision
 
+ --## Let's replace the wind directions with words as it is not spoken properly via TTS##
+
+ 
     local transformText = {}   -- To adapt the text to a vocal speech
     transformText[#transformText+1] = {"ºc" ,"degré"}
     transformText[#transformText+1] = {" ene " ," "}
@@ -107,7 +134,7 @@ function morning()
         prevision = string.gsub(prevision, v[1], v[2])
     end
 
-    sentence = sentence .. " La journée sera " .. prevision
+    sentence = sentence .. " La journée est " .. prevision
 
     ------------------  TRASH DAY MORNING ------------------
     -- Trash day : Mardi vegetaux & ordure / jeudi recyclage &  encombrant (pair) ou  verre (impair) / samedi ordure
@@ -148,8 +175,11 @@ function morning()
     else
         sentence = sentence .. " Passez une bonne journée."
     end
-    My.Speak(sentence, "normal")
+    My.Speak("alexa",sentence, "normal")
     commandArray[#commandArray + 1] = { ['SendNotification'] = 'Annonce du matin#' .. sentence .. '#0' }
+
+
+
 end
 
 function evening()
@@ -183,12 +213,57 @@ function evening()
         sentence = sentence .. "l'alarme nocturne est activée à minuit trente."
     elseif otherdevices['Alarm Mode'] == 'Off' then
         -- check for security by night
-        sentence = sentence .. "l'alarme nocturne n'est actuellement pas activée."
+        sentence = sentence .. "l'alarme nocturne n'est  pas activée."
     end
 
     ------------------ Prevision Météo
     json = (loadfile "/home/pi/domoticz/scripts/lua/JSON.lua")()
-    local file = assert(io.popen('curl http://api.wunderground.com/api/' .. wuAPIkey .. '/forecast/lang:FR/q/France/' .. city .. '.json'))
+
+    local file = assert(io.popen('curl "https://api.darksky.net/forecast/' .. dsAPIkey .. '/'..latitude..','..longitude..'?lang=fr&units=ca"'))
+    local raw = file:read('*all')
+    file:close()
+
+    local jsonForecast = json:decode(raw)
+
+    
+--    prevision = jsonForecast.hourly.summary  --résume les 12 prochaines heures  (avec 49 heures de data)
+
+    alerteVent = jsonForecast.daily.data[1].windGust  -- vent cette nuit
+    
+    if alerteVent > 29 then
+        sentence = sentence .. " Attention, cette nuit la météo prévoit des bourasques jusqu'à " .. tostring(My.Round(alerteVent, 0)) .. " kilomètres heure."
+    end
+    
+    
+    prevision = jsonForecast.daily.data[2].summary   -- résume la journée de demain
+    local high = jsonForecast.daily.data[2].temperatureMax  -- le 2eme index s'appelle 1...
+    local low = jsonForecast.daily.data[2].temperatureMin
+
+
+    
+    local maxwind = jsonForecast.daily.data[2].windSpeed
+    local precipProbability = jsonForecast.daily.data[2].precipProbability
+    local precipIntensity = jsonForecast.daily.data[2].precipIntensity
+
+    sentence=sentence.. " Pour demain, la météo prévoit " .. prevision .. " Avec une température de " .. tostring(My.Round(low, 0)) .. " à " .. tostring(My.Round(high, 0)) .. " degré. "
+
+    if maxwind > 29 then
+        sentence = sentence .. " Le vent pourra atteindre " .. maxwind .. " kilomètre heure."
+    end
+
+
+    if precipProbability > 20 then
+        sentence = sentence .. " et il est annoncé une probabilité de pluie de " .. precipProbability .. " pourcent et " .. precipIntensity .." milimetre."
+    end
+
+--[[
+    local snow = jsonForecast.forecast.simpleforecast.forecastday[2].snow_allday.cm
+    if snow > 0 then
+        sentence = sentence .. " et " .. snow .. " centimètre de neige sont annoncés."
+    end
+
+
+local file = assert(io.popen('curl http://api.wunderground.com/api/' .. wuAPIkey .. '/forecast/lang:FR/q/France/' .. city .. '.json'))
     local raw = file:read('*all')
     file:close()
 
@@ -208,7 +283,7 @@ function evening()
     if snow > 0 then
         sentence = sentence .. " et " .. snow .. " centimètre de neige sont annoncés."
     end
-
+]]--
     ------------------ Check MAIL BOX ------------------
     if uservariables['mode'] == "DayOff" then
         -- Uniquement le samedi, férié , vacance ...
@@ -245,7 +320,7 @@ function evening()
             (month == 12 and day <= 15) or
             (month > 3 and month < 12)
             then
-                sentenceTrash = sentenceTrash .. " les vegetaux et"
+                sentenceTrash = sentenceTrash .. " les végétaux et"
             end
             sentenceTrash = sentenceTrash .. " les poubelles sont ramassées demain matin."
         elseif (numOfDay == 6) then
@@ -257,13 +332,14 @@ function evening()
     end
 
     if sentence ~= "" then
-        sentence = "Bonsoir, je vous informe que, " .. sentence
-        My.Speak(sentence, "normal")
+        sentence = "Bonsoir, " .. sentence    -- bonsoir, je vous informe que
+        My.Speak("alexa",sentence, "normal")
         commandArray[#commandArray + 1] = { ['SendNotification'] = 'Annonce du soir#' .. sentence .. '#0' }
     end
 end
 
 commandArray = {}
+
 
 local weekday = os.date("%w")   -- jour de la semaine : 0=sunday  to 6=saturday
 local time = os.date("*t")
@@ -273,8 +349,13 @@ local minutes = time.min + time.hour * 60
 -- en semaine : 8h14 précise  -- Pour marquer le départ de la maison
 -- en DayOff : Entre 1 et 2 minutes après une détection de mouvement sous la véranda (1 seule fois)
 
+--morning()  -- pour test
+
+
+
 if (uservariables['mode'] == "WorkingDay" and time.hour == 8 and time.min == 14)
     or (uservariables['mode'] == "DayOff"
+        and (time.hour > 7)
         and My.Time_Difference(otherdevices_lastupdate['Motion LivingRoom']) > 120
         and My.Time_Difference(otherdevices_lastupdate['Motion LivingRoom']) < 180
         and string.sub(uservariables_lastupdate['goodMorning'], 9, 10) ~= os.date("%d")  -- Check Only one time per day
@@ -285,6 +366,9 @@ then
 end
 
 -- #############  VOCAL ANNOUNCEMENT - EVENING #################
+
+--evening()
+
 s = uservariables_lastupdate['goodMorning']
 tAnnonce = os.time { year = string.sub(s, 1, 4), month = string.sub(s, 6, 7), day = string.sub(s, 9, 10), hour = string.sub(s, 12, 13), min = string.sub(s, 15, 16), sec = string.sub(s, 18, 19) }
 t = os.time { year = string.sub(s, 1, 4), month = string.sub(s, 6, 7), day = string.sub(s, 9, 10), hour = 19, min = 03, sec = 50 }
