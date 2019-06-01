@@ -58,7 +58,7 @@ if (uservariables['mode'] ~= "Away") then
 		if tVolet<t  -- condition : le volet ne se ferme qu'une fois. il a bougé en open ou stopped, avant 19h29  (s'il a bougé après, c'est une manip manuelle, donc ne pas refermer).
 		then
 			commandArray[#commandArray + 1]={['Volet Salon']='On AFTER 30'}
-			My.Speak("Je fermerais le volet du salon dans 30 secondes.","normal")
+			My.Speak("alexa","Je fermerais le volet du salon dans 30 secondes.","normal")
 		end
 	end
 
@@ -102,21 +102,23 @@ if (uservariables['mode'] ~= "Away") then
 
 --####### PARENTS  25   #######################################################
 
---	##### 	OUVRIR   07:15	Workdays      7:20     7:35   
-	if (time.hour==7) and (time.min==15)
+--	##### 	OUVRIR   07:00	Workdays      7:05     7:20    7:35  
+	if (time.hour==7) and (time.min==00)
 		and (uservariables['mode']== "WorkingDay")
 		and otherdevices['Automatic VR Parent']=='On'
 	then
 			commandArray[#commandArray + 1]={['Volet Parents']='Off'} --  open
 			
 --			if tonumber(otherdevices_svalues['Lux'])>300 then						-- au dela de 1000 
-				commandArray[#commandArray + 1]={['Volet Parents']='Stopped AFTER 6'}
+				commandArray[#commandArray + 1]={['Volet Parents']='Stopped AFTER 3'}
 				
-				commandArray[#commandArray + 1]={['Volet Parents']='Off AFTER 300'} --  open Total
+				commandArray[#commandArray + 1]={['Volet Parents']='Off AFTER 300'} --  5 min
+				commandArray[#commandArray + 1]={['Volet Parents']='Stopped AFTER 303'}
 				
-				commandArray[#commandArray + 1]={['Volet Parents']='Stopped AFTER 304'}
+				commandArray[#commandArray + 1]={['Volet Parents']='Off AFTER 1200'} --  20 min
+				commandArray[#commandArray + 1]={['Volet Parents']='Stopped AFTER 1203'}		
 				
-				commandArray[#commandArray + 1]={['Volet Parents']='Off AFTER 1200'} --  open Total
+				commandArray[#commandArray + 1]={['Volet Parents']='Off AFTER 2100'} --  35 min  open Total				
 				
 --			elseif tonumber(otherdevices_svalues['Lux'])>200 then					-- entre 500 et 1000 
 --				commandArray[#commandArray + 1]={['Volet Parents']='Stopped AFTER 3'}
@@ -142,6 +144,8 @@ if (uservariables['mode'] ~= "Away") then
 --[[
 
 --####### LUMIERE  #######################################################
+
+-- !!!! Prise Salon renommée en Prise Parent. 
 --	Allumer au noir total, après 19h30. Et pas après 20h30 ou 21h30 (pour ne pas rallumer lorsqu'elle s'éteint).
 	if otherdevices['Prise Salon']=='Off'
 		and tonumber(otherdevices_svalues['Lux'])==0
