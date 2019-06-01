@@ -1,0 +1,78 @@
+--[[ dzVents script
+Event name: glass_roof
+
+Manages the roller shutter of the canopy, depending on the position of the sun
+]]-- 
+
+-- 20000  total gris
+-- 40000 pas de nécessité de Fermer
+-- 50000 fermer à moitié
+
+-- soleil dépasse maison avec azimuth 216  (et alt 54)
+
+
+
+--[[
+
+
+Boucle : 
+on ferme seulement si    (donc on ferme 1 seule fois)
+pas déjà fermé  et pas déjà ouvert.
+
+réouverture 14h40 , s'il a été fermé et qu'il n'a pas été déjà réouvert
+
+
+]]--
+
+
+
+return {
+   on = {
+      timer = {'every 5 minutes at 11:00-14:40'}  --14:40
+   },
+
+    execute = function(domoticz, item, info)
+        local idxCloud=171
+        local Period="at 11:00-14:00"  -- Fenetre pour fermer rollax. jusqu'a 14:00
+        
+ 
+        if domoticz.devices('Automatic VR Rolax').state == 'On' then
+          
+                
+            if domoticz.time.matchesRule(Period)
+            and   -- le rollax n'a ni été fermé , ni été ouvert
+            (not(domoticz.devices('Fermer Rolax').lastUpdate.isToday)  or (domoticz.devices('Fermer Rolax').lastUpdate.isToday  and  not(domoticz.devices('Fermer Rolax').lastUpdate.matchesRule(Period)) ))
+            and 
+            (not(domoticz.devices('Ouvrir Rolax').lastUpdate.isToday)  or (domoticz.devices('Ouvrir Rolax').lastUpdate.isToday  and  not(domoticz.devices('Ouvrir Rolax').lastUpdate.matchesRule(Period)) ))
+            then
+                domoticz.log("Script: " .. info.scriptName .. " Le rollax n'a pas bougé", domoticz.LOG_INFO)    
+                    if domoticz.devices(idxCloud).percentage <20 then    -- très peu de nuage. Fermeture complète
+                        domoticz.log("Script: " .. info.scriptName .. " Fermeture complète du Rollax. "..domoticz.devices(idxCloud).percentage.."% de Nuage" , domoticz.LOG_INFO) 
+                        domoticz.devices('Fermer Rolax').switchOn()
+                        domoticz.notify("Rollax midi"," Fermeture complète du rollax ")
+                    elseif  domoticz.devices(idxCloud).percentage < 50 then    -- beaucoup  de nuage. Fermeture partielle
+                        domoticz.log("Script: " .. info.scriptName .. " Fermeture à moitié du Rollax "..domoticz.devices(idxCloud).percentage.."% de Nuage" , domoticz.LOG_INFO)  
+                        domoticz.devices('Fermer Rolax').switchOn().repeatAfterSec(15, 1) 
+                        domoticz.notify("Rollax midi"," Fermeture partielle du rollax ")
+                    else 
+                        domoticz.notify("Rollax midi"," Cloud >50 - Pas de fermeture du rollax ")
+                    end     
+            elseif domoticz.time.matchesRule('at 14:40') and domoticz.devices('Fermer Rolax').lastUpdate.minutesAgo<230 and domoticz.devices('Ouvrir Rolax').lastUpdate.minutesAgo>120  then  -- rollax a été fermé dans le créneau
+                -- 14h40 réouverture si rollax a été fermé depuis 11h et pas réouvert depuis 2h 
+                
+                domoticz.log("Script: " .. info.scriptName .. " Réouverture du rollax ", domoticz.LOG_INFO)
+                domoticz.devices('Ouvrir Rolax').switchOn()
+                domoticz.notify("Rollax midi"," Réouverture du rollax ")
+        
+            else   -- ici le rollax a bougé ce matin mais il n'est pas encore 14h40
+                --domoticz.log("Script: " .. info.scriptName .. "  sortie probleme ", domoticz.LOG_INFO)
+                --domoticz.notify("Rollax midi"," probleme : erreur dans les conditions . rollax a bougé  et ne se referme pas à 14h")
+            end
+      
+        end
+    end
+}
+
+
+
+
