@@ -1,5 +1,6 @@
 --[[ dzVents script
 Event name: glass_roof
+Type : dzVents
 
 Manages the roller shutter of the canopy, depending on the position of the sun
 ]]-- 
