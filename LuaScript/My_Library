@@ -1,11 +1,16 @@
 --[[
+script : /home/pi/domoticz/scripts/lua/My_Library.lua
+
+include it in your script with  :
 package.path = package.path .. ';' .. '/home/pi/domoticz/scripts/lua/?.lua'
 My = require('My_Library')
 
-Speak(text, volume, sound)
+USE : 
+Speak(device,text, volume, sound)
+device : 'alexa'  send text to speech to alexa  https://www.domoticz.com/forum/viewtopic.php?f=69&t=24272   , otherwise use izsynth  http://www.domoticz.com/wiki/IzSynth   on PI
 volume : 'fort' or 'faible'
 sound : optional . an mp3 file
-use izsynth : http://www.domoticz.com/wiki/IzSynth
+
 
 Check if file exist.
    if not My.File_Exists(LogFile) then
@@ -44,7 +49,7 @@ function My.Time_Difference(timestamp)
     return difference
 end
 
-function My.Speak(text, volume, sound)
+function My.Speak(device,text, volume, sound)
     vol = 85
     if volume == "fort" then
         vol = 100
@@ -53,16 +58,19 @@ function My.Speak(text, volume, sound)
         vol = 75
     end
 
-    if string.len(text) > 60 then
-        -- w pour écraser
-        cmd = "izsynth -t \"" .. text .. "\" -T 1 -w -W " .. vol .. " -d alsa:device=hw=0.0 "
-    else
-        cmd = "izsynth -t \"" .. text .. "\" -T 1 -W " .. vol .. " -d alsa:device=hw=0.0 "
-    end
-
+	if device=="alexa" then
+		cmd = "/home/pi/alexa_remote_control_plain.sh -d Salon -e speak:\"".. text .. "\""
+	else  -- sur Pi
+		if string.len(text) > 60 then
+			-- w pour écraser
+			cmd = "izsynth -t \"" .. text .. "\" -T 1 -w -W " .. vol .. " -d alsa:device=hw=0.0 "
+		else
+			cmd = "izsynth -t \"" .. text .. "\" -T 1 -W " .. vol .. " -d alsa:device=hw=0.0 "
+		end
+	end
     if sound ~= nil
     then
-        cmd = cmd .. " ; sleep 4 ; mpg321 -g 50 /home/pi/domoticz/scripts/lua/" .. sound .. ".mp3 &"
+        cmd = cmd .. " ; sleep 4 ; mpg321 -g "..vol.." /home/pi/domoticz/scripts/lua/" .. sound .. ".mp3 &"
     else
         cmd = cmd .. "&"
     end
