@@ -3,10 +3,8 @@
 	* My_Config.lua 	
 	* My_Library 	                      	A lot of functions , included the nice TextToSpeak function.
 	* lib_jourFerie.lua 	              	Calculate the public holiday 
-
-
-  * BlindForGlassRood                   dzEvents script - Manage Blind depending of the Sun position
-  * SolarData                           dzEvents script - Usefull data on the sun, for your location
+  	* BlindForGlassRood                   dzEvents script - Manage Blind depending of the Sun position
+ 	* SolarData                           dzEvents script - Usefull data on the sun, for your location
 	* script_device_Alarm_NightnDays.lua  Alarm System 	 
 	* script_device_ChangeMode.lua 	    	Automaticaly set each day, between Day Off, Vacation, working Day. 
 	* script_device_MailBox.lua 	    	Do you receive PostMail ? 
