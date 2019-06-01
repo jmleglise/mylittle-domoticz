@@ -1,0 +1,194 @@
+--[[
+	Prerequisits
+	==================================
+	Requires Domoticz v3.8551 or later
+	Platform dependent, requires Linux
+
+	CHANGE LOG: See http://www.domoticz.com/forum/viewtopic.php?t=19220 
+
+Virtual Lux sensor and other real-time solar data
+
+-- Authors  ----------------------------------------------------------------
+	V1.0 - Sébastien Joly - Great original work
+	V1.1 - Neutrino - Adaptation to Domoticz
+	V1.2 - Jmleglise - An acceptable approximation of the lux below 1° altitude for Dawn and dusk + translation + several changes to be more userfriendly.
+	V1.3 - Jmleglise - No update of the Lux data when <=0 to get the sunset and sunrise with lastUpdate
+	V1.4 - use the API instead of updateDevice to update the data of the virtual sensor to be able of using devicechanged['Lux'] in our scripts. (Due to a bug in Domoticz that doesn't catch the devicechanged event of the virtual sensor)
+	V1.5 - xces - UTC time calculation.
+	V2.0 - BakSeeDaa - Converted to dzVents and changed quite many things.
+	v3.0 - Bram Vreugdenhil Converted from Weather underground api calls to data of domoticz devices so you can use OpenWeathermaps sensors or own sensors
+]]--
+
+package.path = package.path .. ';' .. '/home/pi/domoticz/scripts/lua/?.lua'
+require('My_Config')
+
+-- Input devices . You can use Openweathermap devices for it. 
+-- Just add "Open Weather Map" in the hardware setup.  location = city,country like : paris,fr 
+-- with setup/settings "Accept new Hardware Devices" enabled !!!
+
+local idxCloudCover = 171      -- (Integer) Device ID of device holding cloudcoverage
+local idxBarometer  = 168      -- (Integer) Device ID of device barometric presusure
+
+-- Output Device  (can be nil )------------------------------------------
+local idxSolarAzimuth  = 111 -- (Integer) Virtual Azimuth Device ID
+local idxSolarAltitude = 112 -- (Integer) Your virtual Solar Altitude Device ID
+local idxRadiation     = 172 -- (Integer) Domoticz virtual Radiation device ID
+local idxLux           = 72 -- (Integer) Domoticz virtual Lux device ID
+
+-- Other parameters -----------------------------------------------------
+local logToFile = false		  -- (Boolean) Set to true if you also wish to log to a file. It might get big by time. 
+local tmpLogFile = '/tmp/logSun.txt'-- Logging to a file if specified 
+local fetchIntervalMins = 5	  -- (Integer) (Minutes, Range 5-60) How often Wunderground API is called 
+
+
+local latitude  = MY_LATITUDE	-- Latitude. (Decimal number) Decimal Degrees. E.g. something like 51.748485
+local longitude = MY_LONGITUDE	-- Longitude. (Decimal number) Decimal Degrees. E.g.something like 5.629728.
+
+--[[
+TODO
+settings:
+domoticzVersion:2.4.15 domoticz version string.
+dzVentsVersion:2.4.15 dzVents version string.
+location
+latitude:2.4.14 domoticz settings locations latitude.
+longitude:2.4.1
+]]--
+
+local altitude  = 27         	-- Altitude. (Integer) Meters above sea level of your location (can be found from coordinates on https://www.advancedconverter.com/map-tools/find-altitude-by-coordinates)
+
+-- Please don't make any changes below this line (Except for setting logging level)
+
+local scriptVersion = '3'
+
+return {
+	active = true,
+	logging = {
+		--level = domoticz.LOG_DEBUG, -- Uncomment to override the dzVents global logging setting
+		marker = 'SOLAR '..scriptVersion
+	},
+	on = {
+		timer = {'every 5 minutes'}
+	},
+	data = {
+		lastOkta = {initial=0},
+		lastOgimetTime = {initial='198001010000'}
+	},
+	execute = function(domoticz, device)
+
+		local function leapYear(year)   
+			return year%4==0 and (year%100~=0 or year%400==0)
+		end
+
+		local arbitraryTwilightLux = 6.32 -- W/m² egal 800 Lux (the theoritical value is 4.74 but I have more accurate result with 6.32...)
+		local constantSolarRadiation = 1361 -- Solar Constant W/m²
+
+		local relativePressure = domoticz.devices(idxBarometer).barometer
+
+		local year = os.date('%Y')
+		local numOfDay = os.date('%j')
+		local nbDaysInYear = (leapYear(year) and 366 or 365)
+
+		local angularSpeed = 360/365.25
+		local declination = math.deg(math.asin(0.3978 * math.sin(math.rad(angularSpeed) *(numOfDay - (81 - 2 * math.sin((math.rad(angularSpeed) * (numOfDay - 2))))))))
+		local timeDecimal = (os.date('!%H') + os.date('!%M') / 60) -- Coordinated Universal Time  (UTC)
+		local solarHour = timeDecimal + (4 * longitude / 60 )    -- The solar Hour
+		local hourlyAngle = 15 * ( 12 - solarHour )          -- hourly Angle of the sun
+		local sunAltitude = math.deg(math.asin(math.sin(math.rad(latitude))* math.sin(math.rad(declination)) + math.cos(math.rad(latitude)) * math.cos(math.rad(declination)) * math.cos(math.rad(hourlyAngle))))-- the height of the sun in degree, compared with the horizon
+
+		local azimuth = math.acos((math.sin(math.rad(declination)) - math.sin(math.rad(latitude)) * math.sin(math.rad(sunAltitude))) / (math.cos(math.rad(latitude)) * math.cos(math.rad(sunAltitude) ))) * 180 / math.pi -- deviation of the sun from the North, in degree
+		local sinAzimuth = (math.cos(math.rad(declination)) * math.sin(math.rad(hourlyAngle))) / math.cos(math.rad(sunAltitude))
+		if(sinAzimuth<0) then azimuth=360-azimuth end
+		local sunstrokeDuration = math.deg(2/15 * math.acos(- math.tan(math.rad(latitude)) * math.tan(math.rad(declination)))) -- duration of sunstroke in the day . Not used in this calculation.
+		local RadiationAtm = constantSolarRadiation * (1 +0.034 * math.cos( math.rad( 360 * numOfDay / nbDaysInYear ))) -- Sun radiation  (in W/m²) in the entrance of atmosphere.
+		-- Coefficient of mitigation M
+		local absolutePressure = relativePressure - domoticz.utils.round((altitude/ 8.3),1) -- hPa
+		local sinusSunAltitude = math.sin(math.rad(sunAltitude))
+		local M0 = math.sqrt(1229 + math.pow(614 * sinusSunAltitude,2)) - 614 * sinusSunAltitude
+		local M = M0 * relativePressure/absolutePressure
+
+		domoticz.log('', domoticz.LOG_INFO)
+		domoticz.log('==============  SUN  LOG ==================', domoticz.LOG_INFO)
+		--domoticz.log(city .. ', latitude: ' .. latitude .. ', longitude: ' .. longitude, domoticz.LOG_INFO)
+		--domoticz.log('Home altitude = ' .. tostring(altitude) .. ' m', domoticz.LOG_DEBUG)
+		domoticz.log('Angular Speed = ' .. angularSpeed .. ' per day', domoticz.LOG_DEBUG)
+		domoticz.log('Declination = ' .. declination .. '°', domoticz.LOG_DEBUG)
+		domoticz.log('Universal Coordinated Time (UTC) '.. timeDecimal ..' H.dd', domoticz.LOG_DEBUG)
+		domoticz.log('Solar Hour '.. solarHour ..' H.dd', domoticz.LOG_DEBUG)
+		domoticz.log('Altitude of the sun = ' .. sunAltitude .. '°', domoticz.LOG_INFO)
+		domoticz.log('Angular hourly = '.. hourlyAngle .. '°', domoticz.LOG_DEBUG)
+		domoticz.log('Azimuth of the sun = ' .. azimuth .. '°', domoticz.LOG_INFO)
+		domoticz.log('Duration of the sun stroke of the day = ' .. domoticz.utils.round(sunstrokeDuration,2) ..' H.dd', domoticz.LOG_DEBUG)
+		domoticz.log('Radiation max in atmosphere = ' .. domoticz.utils.round(RadiationAtm,2) .. ' W/m²', domoticz.LOG_DEBUG)
+		domoticz.log('Local relative pressure = ' .. relativePressure .. ' hPa', domoticz.LOG_DEBUG)
+		domoticz.log('Absolute pressure in atmosphere = ' .. absolutePressure .. ' hPa', domoticz.LOG_DEBUG)
+		domoticz.log('Coefficient of mitigation M = ' .. M ..' M0 = '..M0, domoticz.LOG_DEBUG)
+
+		-- In meteorology, an okta is a unit of measurement used to describe the amount of cloud cover
+		-- at any given location such as a weather station. Sky conditions are estimated in terms of how many
+		-- eighths of the sky are covered in cloud, ranging from 0 oktas (completely clear sky) through to 8 oktas
+		-- (completely overcast). In addition, in the synop code there is an extra cloud cover indicator '9'
+		-- indicating that the sky is totally obscured (i.e. hidden from view),
+		-- usually due to dense fog or heavy snow.
+
+        Cloudpercentage = domoticz.devices(idxCloudCover).percentage
+		
+		okta = Cloudpercentage/12.5
+		
+		local Kc = 1-0.75*math.pow(okta/8,3.4)  -- Factor of mitigation for the cloud layer
+
+		local directRadiation, scatteredRadiation, totalRadiation, Lux, weightedLux
+		if sunAltitude > 1 then -- Below 1° of Altitude , the formulae reach their limit of precision.
+			directRadiation = RadiationAtm * math.pow(0.6,M) * sinusSunAltitude
+			scatteredRadiation = RadiationAtm * (0.271 - 0.294 * math.pow(0.6,M)) * sinusSunAltitude
+			totalRadiation = scatteredRadiation + directRadiation
+			Lux = totalRadiation / 0.0079  -- Radiation in Lux. 1 Lux = 0,0079 W/m²
+			weightedLux = Lux * Kc   -- radiation of the Sun with the cloud layer
+		elseif sunAltitude <= 1 and sunAltitude >= -7  then -- apply theoretical Lux of twilight
+			directRadiation = 0
+			scatteredRadiation = 0
+			arbitraryTwilightLux=arbitraryTwilightLux-(1-sunAltitude)/8*arbitraryTwilightLux
+			totalRadiation = scatteredRadiation + directRadiation + arbitraryTwilightLux 
+			Lux = totalRadiation / 0.0079  -- Radiation in Lux. 1 Lux = 0,0079 W/m²
+			weightedLux = Lux * Kc   -- radiation of the Sun with the cloud layer
+		elseif sunAltitude < -7 then  -- no management of nautical and astronomical twilight...
+			directRadiation = 0
+			scatteredRadiation = 0
+			totalRadiation = 0
+			Lux = 0
+			weightedLux = 0  --  should be around 3,2 Lux for the nautic twilight. Nevertheless.
+		end
+
+        totalRadiation=totalRadiation*Kc
+        
+		domoticz.log('Okta = '..okta.. ' Cloud coverage = ' ..Cloudpercentage .. '%', domoticz.LOG_INFO)
+		domoticz.log('Kc = ' .. Kc, domoticz.LOG_DEBUG)
+		domoticz.log('Direct Radiation = '.. domoticz.utils.round(directRadiation,2) ..' W/m²', domoticz.LOG_INFO)
+		domoticz.log('Scattered Radiation = '.. domoticz.utils.round(scatteredRadiation,2) ..' W/m²', domoticz.LOG_DEBUG)
+		domoticz.log('Total radiation = ' .. domoticz.utils.round(totalRadiation,2) ..' W/m²', domoticz.LOG_INFO)
+		domoticz.log('Total Radiation in lux = '.. domoticz.utils.round(Lux,2)..' Lux', domoticz.LOG_DEBUG)
+		domoticz.log('Total weighted lux  = '.. domoticz.utils.round(weightedLux,2)..' Lux', domoticz.LOG_INFO)
+
+		-- No update if Lux is already 0. So lastUpdate of the Lux sensor will keep the time when Lux has reached 0.
+		-- (Kind of timeofday['SunsetInMinutes'])
+		if idxLux and domoticz.devices(idxLux).lux + domoticz.utils.round(weightedLux, 0) > 0 then
+			domoticz.devices(idxLux).updateLux(domoticz.utils.round(weightedLux,0))
+		end
+		if(idxSolarAzimuth) then
+		   domoticz.devices(idxSolarAzimuth).updateCustomSensor(domoticz.utils.round(azimuth,0))
+		end   
+		if(idxSolarAltitude) then
+		   domoticz.devices(idxSolarAltitude).updateCustomSensor(domoticz.utils.round(sunAltitude,0))
+		end
+		-- No update if radiation is already 0. See LUX
+		if idxRadiation and (domoticz.devices(idxRadiation).rawData[1] + domoticz.utils.round(totalRadiation, 2) > 0) then 
+		    domoticz.devices(idxRadiation).updateCustomSensor(domoticz.utils.round(totalRadiation,2))
+		end
+		if logToFile then
+			local logDebug = os.date('%Y-%m-%d %H:%M:%S',os.time())
+			logDebug=logDebug..' Azimuth:' .. azimuth .. ' Height:' .. sunAltitude
+			logDebug=logDebug..' Okta:' .. okta..'  KC:'.. Kc
+			logDebug=logDebug..' Direct:'..directRadiation..' inDirect:'..scatteredRadiation..' TotalRadiation:'..totalRadiation..' LuxCloud:'.. domoticz.utils.round(weightedLux,2)
+			os.execute('echo '..logDebug..' >>'..tmpLogFile)  -- compatible Linux & Windows
+		end
+	end
+}
