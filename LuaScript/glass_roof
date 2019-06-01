@@ -4,9 +4,9 @@ Event name: glass_roof
 Manages the roller shutter of the canopy, depending on the position of the sun
 ]]-- 
 
--- 20000  total gris
--- 40000 pas de nécessité de Fermer
--- 50000 fermer à moitié
+-- 20000 lux  total gris
+-- 40000 lux pas de nécessité de Fermer
+-- 50000 lux fermer à moitié
 
 -- soleil dépasse maison avec azimuth 216  (et alt 54)
 
