@@ -1,7 +1,6 @@
 --[[######################################################################################
 Script : ~/domoticz/scripts/lua/script_time_setTodayMode.lua
 
-Les scripts utilisent la uservariable mode
 
 Changement du switch Mode:
 manuel, away  => fixe la uservariable
@@ -14,7 +13,15 @@ Calcule le type de journée :
 si férié ou Week End => DayOff
 Si Away : pas de modification
 
-Require: otherdevices['Mode']
+Require:
+uservariable : mode, string
+virtual device 'Mode', type : switch subtype selector,  button set,  
+with 5 selectors levels :
+0       off	
+10	Away
+20	Man. DayOff
+30	Man. WorkDay
+40	Auto 
 
 ##########################################################################################]]--
 
