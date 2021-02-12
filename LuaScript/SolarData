@@ -1,13 +1,18 @@
 --[[
+This script calculate in real-time some usefull solar data without any hardware sensor :
+·  Azimuth : Angle between the Sun and the north, in degree. (north vector and the perpendicular projection of the sun down onto the horizon)
+·  Altitude : Angle of the Sun with the horizon, in degree.
+·  Lux : The illuminance, equal to one lumen per square metre. Taking account of the real time cloud layer.
+
+-- Installation & Documentation -----------------------------------------------------------
+https://www.domoticz.com/wiki/index.php?title=Lua_dzVents_-_Solar_Data:_Azimuth_Altitude_Lux
 
 -- Prerequisits  -----------------------------------------------------------
-
 	2 sensors with Cloud Cover and Pressure updated
 	Requires Domoticz v3.8551 or later.   
 	Work with lua 5.3 too.
 	No Platform dependent; Linux & Windows
 
-Virtual Lux sensor and other real-time solar data
 
 -- Contributors  ----------------------------------------------------------------
 	V1.0  - Sébastien Joly - Great original work
@@ -29,8 +34,7 @@ local scriptVersion = '3.1'
 -- Variables to customize ------------------------------------------------
 
 -- Devices for Input Data
---680  Openweathermap
-local idxCloudCover = 684  --gimet   -- device holding cloudcoverage in percentage. Ex : 60%  (for E.g. a device from Openweathermap or darksky)
+local idxCloudCover = 684       -- device holding cloudcoverage in percentage. Ex : 60%  (for E.g. a device from Openweathermap or darksky)
 local idxBarometer  = 675       -- Barometer device. E.g. a device from Openweathermap that contains value in hPa: like a Temp+Humidity+Baro device with : -0.5 C, 59 %, 1023.0 hPa  (for E.g. a device from Openweathermap or your own hardware sensor)
 
 -- Devices for Output Data  (can be nil if you dont want some data)------------------------------------------
