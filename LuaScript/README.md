@@ -7,6 +7,12 @@
   	* BlindForGlassRood                   dzEvents script - Manage Blind depending of the Sun position
  	* SolarData                           dzEvents script - Usefull data on the sun, for your location
 
+	* dzvents_Rolax
+
+![image](https://user-images.githubusercontent.com/1726314/147885299-5a223bbc-5f58-455a-afd6-e252bb8ae6b4.png)
+
+
+
 	* script_device_Alarm_NightnDays.lua  Alarm System 	 
 	* script_device_ChangeMode.lua 	    	Automaticaly set each day, between Day Off, Vacation, working Day. 
 	* script_device_MailBox.lua 	    	Do you receive PostMail ? 
