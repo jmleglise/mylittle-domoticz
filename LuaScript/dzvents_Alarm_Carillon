@@ -1,0 +1,95 @@
+--[[
+Author jmleglise
+V 1.1
+
+Alarm_mode == Carillon
+A special mode of my Alarm ,  used when we are at home. night and days.
+
+A carillon system to ring a bell and voice alert when a door is opened.
+With a lot of conditions to target external persons and not the residents depending of the PIR and the order of opening. 
+
+The z-wave bell : https://fr.aliexpress.com/item/32846957172.html
+Voice rendering : Alexa
+
+]]--
+return {
+	on = {
+		devices = {
+		 'Door1 Perron','Door2 Veranda', 'Door4 Garage','Door3 Jardin', 
+		 'Alarm Mode'   -- le switchSelector 
+		},
+	},
+	logging = {
+		level = domoticz.LOG_INFO,
+		marker = 'Carillon',
+	},
+	execute = function(dz, item)
+
+        if item.name=='Alarm Mode' and item.levelName == 'Carillon' then 
+            os.execute("(export SPEAKVOL=100;/home/pi/bin/alexa_TTS.sh -d 'Fire TV' -e speak:\"Le Carillon est activé.\")&") 
+        end
+
+        function PlaySong(device, song,vol)
+            if device=='siren_neo'  and song=="carillon" then 
+                if vol<50 then
+                    url="http://127.0.0.1/json.htm?type=command&param=applyzwavenodeconfig&idx=9&valuelist=3_MjU1_1_SGlnaA%3D%3D_2_MSBtaW51dGU%3D_4_SGlnaA%3D%3D_5_QmVlcA%3D%3D_6_QmVlcCBCZWVw_7_RG9vciBiZWxsIG11c2lj_8_RW5hYmxl_9_RGlzYWJsZQ%3D%3D_"   -- vol low   
+                else
+                    url="http://127.0.0.1/json.htm?type=command&param=applyzwavenodeconfig&idx=9&valuelist=3_MjU1_1_SGlnaA%3D%3D_2_MSBtaW51dGU%3D_4_SGlnaA%3D%3D_5_QmVlcA%3D%3D_6_QWxlcnQ%3D_7_RG9vciBiZWxsIG11c2lj_8_RW5hYmxl_9_RGlzYWJsZQ%3D%3D_"     -- vol High
+              	end
+              	
+              	local handle = io.popen('curl "'..url..'"')
+                local result = handle:read("*a")
+                handle:close()
+                dz.devices('neo Siren Switch').switchOn().forSec(3)
+        --    elseif device=='siren_neo'  and song=="alarm" then 
+        --    elseif device=='siren_neo'  and song=="alarm" then 
+            elseif device=='hp_pi'  and song=="carillon" then 
+                sound="carillon"
+                cmd = "mpg321 -g "..vol.." /home/pi/domoticz/scripts/lua/" .. sound .. ".mp3 &"
+                os.execute(cmd) 
+            end
+        end	
+
+        if item.state == 'Open' and dz.devices('Alarm Mode').levelName == 'Carillon' and item.lastUpdate.minutesAgo>3
+        then 
+--  PERRON  sonne si : personne au SALON depuis 3 minutes.
+            if item.name == 'Door1 Perron' and dz.devices('Motion LivingRoom').state == 'Off' and dz.devices('Motion LivingRoom').lastUpdate.minutesAgo >3
+            then       
+                dz.notify('carillon', dz.time.rawTime..':Ouverture de la porte d\'entrée',PRIORITY_HIGH,nil,nil,NSS_TELEGRAM,nil)
+     		    PlaySong('siren_neo', "carillon",100)
+                os.execute("(export SPEAKVOL=70;/home/pi/bin/alexa_TTS.sh -d Maison -e speak:\"c'est la porte d'entrée\")&") 
+
+-- VERANDA  sonne si :   personne au salon ni dans la veranda depuis au moins 1 minute .
+            elseif item.name == 'Door2 Veranda' and dz.devices('Motion Veranda').state == 'Off' and dz.devices('Motion LivingRoom').state == 'Off' and dz.devices('Motion Veranda').lastUpdate.minutesAgo >1
+            then    
+                dz.notify('carillon', dz.time.rawTime..':Ouverture de la porte de la Véranda',PRIORITY_HIGH,nil,nil,NSS_TELEGRAM,nil)
+     		    PlaySong('siren_neo', "carillon",100)
+                os.execute("(export SPEAKVOL=70;/home/pi/bin/alexa_TTS.sh -d Maison -e speak:\"c'est la véranda\")&") 
+
+-- PORTE JARDIN sonne si :  la porte veranda n'a pas bougé depuis 5min  ET pas mouvement  Veranda (off ni depuis 5 min)
+            elseif item.name == 'Door3 Jardin' and dz.devices('Door2 Veranda').lastUpdate.minutesAgo>5 and dz.devices('Motion Veranda').lastUpdate.minutesAgo>5 and  dz.devices('Motion Veranda').state == 'Off'
+            then           
+                dz.notify('carillon', dz.time.rawTime..':Ouverture de la porte coté Jardin',PRIORITY_HIGH,nil,nil,NSS_TELEGRAM,nil)
+                if dz.devices('Motion LivingRoom').state == 'On' 
+                then vol=30
+                else vol=70 
+                end
+     		    PlaySong('siren_neo', "carillon",vol)
+                os.execute("(export SPEAKVOL="..vol..";/home/pi/bin/alexa_TTS.sh -d Maison -e speak:\"c'est la porte coté jardin\")&") 
+                
+-- PORTE GARAGE sonne si : porte entrée pas bougée depuis 5 min ni  porte jardin depuis 5 min 
+            elseif item.name == 'Door4 Garage' and dz.devices('Door1 Perron').lastUpdate.minutesAgo >5 and dz.devices('Door3 Jardin').lastUpdate.minutesAgo >5
+            then   --Personne au salon depuis 2 minutes
+                dz.notify('carillon', dz.time.rawTime..':Ouverture de la porte du Garage',PRIORITY_HIGH,nil,nil,NSS_TELEGRAM,nil)
+                if dz.devices('Motion LivingRoom').state == 'On' 
+                then vol=30
+                else vol=70 
+                end
+     		    PlaySong('siren_neo', "carillon",vol)
+                os.execute("(export SPEAKVOL="..vol..";/home/pi/bin/alexa_TTS.sh -d Maison -e speak:\"c'est la porte du garage\")&") 
+            end
+        else
+            dz.log('Device ' .. item.name .. ' was changed. But <4 min. No sound', dz.LOG_INFO)
+        end
+	end
+}
