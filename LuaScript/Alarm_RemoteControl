@@ -1,0 +1,17 @@
+return {
+	on = {
+		devices = {
+			'Cle*',   --   https://fr.aliexpress.com/item/1005003341414786.html     4 RFXCOM device per remote. Named : Cle1-1  Cle1-2 Cle1-3  Cle1-4
+		}
+	},
+	logging = {
+		level = domoticz.LOG_INFO,
+		marker = 'RemotePorteClef',
+	},
+	execute = function(domoticz, device)
+    	if string.sub(device.name,6) == '1' then domoticz.devices('Alarm Mode').switchSelector('On') end
+    	if string.sub(device.name,6) == '2' then domoticz.devices('Alarm Mode').switchSelector('Off') end
+    	if string.sub(device.name,6) == '3' then domoticz.devices('Alarm Mode').switchSelector('') end
+    	if string.sub(device.name,6) == '4' then domoticz.devices('Alarm Mode').switchSelector('Carillon') end
+	end
+}
