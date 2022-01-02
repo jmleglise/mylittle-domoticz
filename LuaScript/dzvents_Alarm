@@ -1,0 +1,165 @@
+--[[ 
+Script : Alarme
+Author : jmleglise
+Version : 2
+
+Real simple Alarm system with :
+- Arming with a delay of 5 minutes to leave the house
+- Detect Intrusion, leave 10 secondes to disarm, before Siren to trigger. 
+- Voice rendering & police sound to disturb the burglars
+- z-wave siren : https://fr.aliexpress.com/item/32846957172.html
+- Wired Siren external and internal of house. ( i am using a KMtronic relay card by USB) : https://fr.aliexpress.com/item/4000783271405.html
+- Physical remote control on keyring to control the alarm : https://fr.aliexpress.com/item/1005003341414786.html
+- Intrusion detected by door sensor : https://fr.aliexpress.com/item/1005002669468742.html
+- Intrusion detected by PIR 
+
+Alarm Mode "On":
+A detection triggered voice and physical siren external and internal the house.
+
+Alarm Mode "Night" Mode :
+If sensors near the Sleeping Room detect motion before other sensors, then the alarm is disarmed. That Means that a familly member get up at night.
+In fact , I have a house on several leval. (sleeping rooms are upstairs.)
+
+A detection, only triggered voice and siren.mp3 to wake up the house.
+Si mouvement entre 0h30 et 6h30 et pas de mouvement upstairs dans les 3 minutes. A chaque détection au salon (repetition)
+Si mouvement upstairs : alarme désactivée
+
+
+REQUIRE :
+devices['Alarm Mode']  switchdevice  with 4 modes  :    Off Night On Auto
+devices['Relay 8 - External Siren']    with auto off delay to 600 sec.
+devices['Relay 7 - Internal Siren']    with auto off delay to 600 sec.
+'door*'  door  window  sensor 
+'Motion LivingRoom'   a wired Motion sensor, directly connect to the gpio of the Pi
+'Motion Veranda'   433Mhz
+'Motion Upstairs'   433Mhz
+
+Require : All Motion sensor must automatically turn Off after a detection in less than 5 minutes.
+Pas de detection dans les 5 minutes après un changement de "Alarm Mode".
+
+Require : dzvents >3.0.0
+
+]]--
+
+return {
+	on = {
+		devices = {
+			'Alarm Mode', 'Door*', 'Motion*'
+		},
+		customEvents =
+        {
+            'alarmCountDownEvent'
+        },
+	},
+
+	logging = {
+		level = domoticz.LOG_INFO,
+		marker = 'Alarme',
+	},
+	execute = function(domoticz, device)
+        local delayArmAlarmInMinute = 5 -- delay to leave the house
+        local alarmCountDownInSec = 10 -- delayed in secondes to trigger the siren. (10 sec courtesy to disarm the alarm)
+        local speakVol = 100
+		
+        local doorSwitch = {  -- EDIT: all physical security sensors  Door & Window
+            ["La porte du perron"] = "Door1 Perron",
+            ["la porte de la veranda"] = "Door2 Veranda",
+            ["la porte du jardin"] = "Door3 Jardin",
+            ["la porte du garage"] = "Door4 Garage",
+            ["la fenêtre du salon"] = "Door5 Fenetre"
+        }
+
+        function talk(vol, speaker, tts)
+            -- Volume, hardware device, The sentence to speech
+            os.execute("(export SPEAKVOL="..vol..";/home/pi/bin/alexa_TTS.sh -d '"..speaker.."' -e speak:\""..tts.."\")&") 
+		end
+
+-- #################   INTRUSION  confirmed. Timer 10 secondes reached. Trigger the Siren.
+-- le CountDown est atteint, 
+-- test une dernière fois le mode Alarm ,  (important car le switch Alarm a pu désactiver l'alarme)
+-- sirène auto Off en 600 secondes.
+
+    	if      device.isCustomEvent -- CountDownTimer reached
+    	    and domoticz.devices('Alarm Mode').levelName == 'On'   -- alarm still active
+        then
+                domoticz.notify('Alarm SOUND', 'Alarm CountDownTimer reached. !!! Siren SOUNDS !!! for 10 minutes. ' .. domoticz.time.rawTime, domoticz.PRIORITY_EMERGENCY)
+                domoticz.devices('Relay 7 - External Siren').switchOn()    -- sounds 10 minutes  (with a device off delay set to 600 sec)
+                -- XXX domoticz.devices('Relay 8 - Internal Siren').switchOn()    -- sounds 10 minutes  (with a device off delay set to 600 sec)
+                -- TODO z-wave siren en boucle os.execute("(/home/pi/bin/sirenNeoAlarm.sh)&")      
+-- #################   ARM ALARM
+        elseif device.name=='Alarm Mode' and device.levelName == 'On' 
+        then
+        -- control all sensor closed
+            local sentence=''
+            local sep='Attention, contacteur ouvert : '
+            for switchName, switchDevice in pairs(doorSwitch) do
+                if domoticz.devices(switchDevice).state == 'Open' 
+                then
+                    sentence =  sentence .. sep .. switchName 
+                    sep=','
+                end
+            end
+            talk(speakVol,'Fire TV', "Alarme activée. "..sentence..". Vous avez "..delayArmAlarmInMinute.." minutes pour quitter la maison.")
+-- #################   DISARM ALARM
+        elseif device.name=='Alarm Mode' and device.levelName == 'Off' 
+        then
+            talk(speakVol,'Fire TV', "Alarme désactivée.")
+            if domoticz.devices('Relay 7 - External Siren').state=='On' then domoticz.devices('Relay 7 - External Siren').switchOff() end
+            if domoticz.devices('Relay 8 - Internal Siren').state=='On' then domoticz.devices('Relay 8 - Internal Siren').switchOff() end
+            -- TODO os.execute("sudo killall sirenNeoAlarm.sh")
+-- ################# Detect Intrusion
+        elseif domoticz.devices('Alarm Mode').levelName == 'On' 
+                and domoticz.devices('Alarm Mode').lastUpdate.minutesAgo > delayArmAlarmInMinute  -- do not detect the intrusion, the first 5 minutes. (Courtesy to leave the house when arming ...Required to all PIR sensor to rest)
+        then
+            if  string.sub(device.name,1,4) == 'Door'
+            then
+                -- TODO prendre photo
+                if domoticz.devices('Relay 7 - External Siren').lastUpdate.minutesAgo > 240  --   4h minimal delayed between 2 siren sounds. no hassle the neighborhood
+                then
+                    domoticz.emitEvent('alarmCountDownEvent', domoticz.time.rawTime ).afterSec(alarmCountDownInSec)    -- Arme le Timer. Siren in 10 secondes
+                    local sentence="Qui est là ! J'appelle la police !"
+                    talk(speakVol,'Fire TV', sentence)
+                    domoticz.notify('Alarm Intrusion', 'First intrusion detected by:'..device.name..'/'..device.state..'. Arm the '..alarmCountDownInSec..' seconds timer.  Speak :'..sentence..' TimeStamp : ' .. domoticz.time.rawTime, domoticz.PRIORITY_EMERGENCY)
+                else
+                    local sentence="La police est prévenue ! Allez vous-en !"
+                    talk(speakVol,'Fire TV', sentence)
+                    domoticz.notify('Alarm new breach', 'New breach detected by:'..device.name..'/'..device.state..'. Speak :'..sentence..' TimeStamp : ' .. domoticz.time.rawTime, domoticz.PRIORITY_EMERGENCY)
+                end
+            elseif  string.sub(device.name,1,6) == 'Motion' and device.state == 'On'
+            then
+                domoticz.notify('Alarm Motion', 'Motion detected by:'..device.name..'/'..device.state..' . TimeStamp : ' .. domoticz.time.rawTime, domoticz.PRIORITY_EMERGENCY)
+            end
+        end
+
+
+            --[[
+            if domoticz.devices('Alarm Mode').levelName == 'Auto' then   -- alarm automatic : check presence of beacon;
+                beaconHome=0
+                for variableName, variableValue in pairs(uservariables) do
+                    if string.sub(variableName,1,3)=="Tag" and (variableValue ~= "AWAY" or uservariables_lastupdate[variableName]<5*60)   then
+                        beaconHome=beaconHome+1
+                    end
+                end
+                if beaconHome==0 then ALARME !!!
+            end
+            ]]--   
+            -- #####################  Security by night  between 0h30 and 6h30
+            --[[    
+            if domoticz.devices('Alarm Mode').levelName == 'Night' -- check for security by night
+            and minutes > 30 and minutes < (6 * 60+30)    -- between 0h30 et 6h30
+            then
+                if My.Time_Difference(otherdevices_lastupdate['Motion Upstairs']) > 3 * 60    -- 3 minutes
+                then
+                    -- No move upstairs first
+                    talk(speakVol,'Fire TV', "Qui est là ? Jappelle la police.")
+                    -- TODO: prendre photo !!!
+                else -- Motion detected downstairs + there was previously a motion upstairs = A family member is awake. it's not an intrusion. => disarm the alarm for the rest of the night.
+              
+                    talk(speakVol,'Fire TV', "Alarme nocturne désactivée pour le reste de la nuit.")
+                    domoticz.devices('Alarm Mode').switchSelector('Off')
+                    domoticz.notify('Alarm', 'Alarm CountDownTimer reached. !!! Siren SOUNDS !!! for 4 minutes. ' .. domoticz.time.rawTime, domoticz.PRIORITY_EMERGENCY)
+                end
+            end
+            ]]--
+    end
+}
