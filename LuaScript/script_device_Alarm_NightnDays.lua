@@ -1,4 +1,6 @@
---[[  ~/domoticz/scripts/lua/script_device_Alarm_NightnDays.lua
+--[[   DEPRECATED. Replaced by the dzevents version
+
+~/domoticz/scripts/lua/script_device_Alarm_NightnDays.lua
 Author : jmleglise
 Version : 1.1
 
