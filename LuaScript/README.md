@@ -16,13 +16,13 @@ Use the HTML entities https://dev.w3.org/html5/html-author/charref to enhance th
 
 	* dzvents_Alarm				Alarm System
 	Nice and real simple Alarm system with voice TTS and several mode "Carillon" "On" "Night" ... 
-<img src="https://user-images.githubusercontent.com/1726314/147885438-4734e193-fd69-4597-9207-60dcbb169f83.png" height="50%" width="50%">
+<img src="https://user-images.githubusercontent.com/1726314/147885438-4734e193-fd69-4597-9207-60dcbb169f83.png" height="40%" width="40%">
 
 
 	 
 	* script_device_ChangeMode.lua 	    	Automaticaly set each day, between Day Off, Vacation, working Day. 
 	* script_time_setTodayMode.lua 
-<img src="https://user-images.githubusercontent.com/1726314/147885511-1c72731f-99bd-47f6-bdaa-529aebe352b9.png" height="50%" width="50%">
+<img src="https://user-images.githubusercontent.com/1726314/147885511-1c72731f-99bd-47f6-bdaa-529aebe352b9.png" height="40%" width="40%">
 	
 	
 	
