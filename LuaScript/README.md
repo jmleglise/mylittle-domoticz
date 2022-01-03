@@ -8,11 +8,11 @@
  	* SolarData                           dzEvents script - Usefull data on the sun, for your location
 
 	* dzvents_Rolax				A Nice switch Selector to replace 2 buttons UP and DOWN to control a blind.
-<img src="https://user-images.githubusercontent.com/1726314/147885347-66a87ba3-6b5f-4762-a1a7-282d2ac2bca5.png" height="70%">
+<img src="https://user-images.githubusercontent.com/1726314/147885347-66a87ba3-6b5f-4762-a1a7-282d2ac2bca5.png" height="60%">
 
 Use the HTML entities https://dev.w3.org/html5/html-author/charref to enhance the buttons : 
 
-<img src="https://user-images.githubusercontent.com/1726314/147885299-5a223bbc-5f58-455a-afd6-e252bb8ae6b4.png" height="70%">
+<img src="https://user-images.githubusercontent.com/1726314/147885299-5a223bbc-5f58-455a-afd6-e252bb8ae6b4.png" height="60%">
 
 	* dzvents_Alarm				Alarm System
 	Nice and real simple Alarm system with voice TTS and several mode "Carillon" "On" "Night" ... 
