@@ -8,7 +8,7 @@
  	* SolarData                           dzEvents script - Usefull data on the sun, for your location
 
 	* dzvents_Rolax				A Nice switch Selector to replace 2 buttons UP and DOWN to control a blind.
-<img src="https://user-images.githubusercontent.com/1726314/147885347-66a87ba3-6b5f-4762-a1a7-282d2ac2bca5.png" height="50%" width="50%">
+<img src="https://user-images.githubusercontent.com/1726314/147885347-66a87ba3-6b5f-4762-a1a7-282d2ac2bca5.png" height="40%" width="40%">
 
 Use the HTML entities https://dev.w3.org/html5/html-author/charref to enhance the buttons : 
 
@@ -16,13 +16,13 @@ Use the HTML entities https://dev.w3.org/html5/html-author/charref to enhance th
 
 	* dzvents_Alarm				Alarm System
 	Nice and real simple Alarm system with voice TTS and several mode "Carillon" "On" "Night" ... 
-![image](https://user-images.githubusercontent.com/1726314/147885438-4734e193-fd69-4597-9207-60dcbb169f83.png)<!-- .element height="50%" width="50%" -->
+<img src="https://user-images.githubusercontent.com/1726314/147885438-4734e193-fd69-4597-9207-60dcbb169f83.png" height="50%" width="50%">
 
 
 	 
 	* script_device_ChangeMode.lua 	    	Automaticaly set each day, between Day Off, Vacation, working Day. 
 	* script_time_setTodayMode.lua 
-![image](https://user-images.githubusercontent.com/1726314/147885511-1c72731f-99bd-47f6-bdaa-529aebe352b9.png) <!-- .element height="50" width="50" -->
+<img src="https://user-images.githubusercontent.com/1726314/147885511-1c72731f-99bd-47f6-bdaa-529aebe352b9.png" height="50%" width="50%">
 	
 	
 	
