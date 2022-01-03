@@ -11,7 +11,7 @@
 ![image](https://user-images.githubusercontent.com/1726314/147885347-66a87ba3-6b5f-4762-a1a7-282d2ac2bca5.png)
 
 Use the HTML entities https://dev.w3.org/html5/html-author/charref to enhance the buttons : 
-![image](https://user-images.githubusercontent.com/1726314/147885299-5a223bbc-5f58-455a-afd6-e252bb8ae6b4.png)
+![image](https://user-images.githubusercontent.com/1726314/147885299-5a223bbc-5f58-455a-afd6-e252bb8ae6b4.png) <!-- .element height="50%" width="50%" -->
 
 
 	* dzvents_Alarm				Alarm System
