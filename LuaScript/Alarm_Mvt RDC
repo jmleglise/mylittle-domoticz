@@ -1,0 +1,85 @@
+--[[
+Author jmleglise
+V 1
+
+Alarm_mode == Mvt RDC
+A special Alarm mode used to protect the 1st floor when we are at home but upstairs. (like asleep, or working at home office)
+and rather for the summer when the windows are open.
+
+It s based only on Mouvement detection device. 
+
+A carillon system rings and voice alerts us when a mouvement are detected floor 1.
+and rather for the summer when the windows are open.
+
+When mouvement are detected upstairs, before downstairs, then the alarm is disarmed. (it's us who come down)  
+
+The z-wave bell : https://fr.aliexpress.com/item/32846957172.html
+Voice rendering : Alexa remote control
+
+]]--
+
+local ALEXA_DEVICE='Maison' --Echoshowsalon'   --'Fire TV'
+local ALEXA_SPEAKVOL=100
+local delayArmAlarmInMinute=5
+return {
+	on = {
+		devices = {
+		 'Motion*',
+		 'Alarm Mode'   -- le switchSelector 
+		},
+	},
+	logging = {
+		level = domoticz.LOG_INFO,
+		marker = 'Mvt RDC',
+	},
+	execute = function(dz, item)
+
+        function talk(vol, speaker, tts)
+            -- Volume, hardware device, The sentence to speech
+            os.execute("(export SPEAKVOL="..vol..";sudo /home/pi/bin/alexa_TTS.sh -d '"..speaker.."' -e speak:\""..tts.."\")&") 
+		end
+		
+        function PlaySong(device, song,vol)
+            if device=='siren_neo'  and song=="carillon" then 
+                if vol<50 then
+                    url="http://127.0.0.1/json.htm?type=command&param=applyzwavenodeconfig&idx=9&valuelist=3_MjU1_1_SGlnaA%3D%3D_2_MSBtaW51dGU%3D_4_SGlnaA%3D%3D_5_QmVlcA%3D%3D_6_QmVlcCBCZWVw_7_RG9vciBiZWxsIG11c2lj_8_RW5hYmxl_9_RGlzYWJsZQ%3D%3D_"   -- vol low   
+                else
+                    url="http://127.0.0.1/json.htm?type=command&param=applyzwavenodeconfig&idx=9&valuelist=3_MjU1_1_SGlnaA%3D%3D_2_MSBtaW51dGU%3D_4_SGlnaA%3D%3D_5_QmVlcA%3D%3D_6_QWxlcnQ%3D_7_RG9vciBiZWxsIG11c2lj_8_RW5hYmxl_9_RGlzYWJsZQ%3D%3D_"     -- vol High
+              	end
+              	
+              	local handle = io.popen('curl "'..url..'"')
+                local result = handle:read("*a")
+                handle:close()
+                dz.devices('neo Siren Switch').switchOn().forSec(3)
+        --    elseif device=='siren_neo'  and song=="alarm" then 
+        --    elseif device=='siren_neo'  and song=="alarm" then 
+            elseif device=='hp_pi'  and song=="carillon" then 
+                sound="carillon"
+                cmd = "mpg321 -g "..vol.." /home/pi/domoticz/scripts/lua/" .. sound .. ".mp3 &"
+                os.execute(cmd) 
+            end
+        end
+    
+        if dz.devices('Alarm Mode').levelName == 'Mvt RDC'  and dz.devices('Alarm Mode').lastUpdate.minutesAgo > delayArmAlarmInMinute  -- pas de detection dans les 5 minutes
+        then
+            if item.name=='Alarm Mode' then    -- c'est un changement de mode d'alarme
+                talk(100,ALEXA_DEVICE,"L'alarme mouvement est activée.") 
+  
+            elseif (item.name  == 'Motion Veranda' or item.name  == 'Motion LivingRoom') and item.state == 'On' and dz.devices('Motion Upstairs').lastUpdate.minutesAgo > delayArmAlarmInMinute -- c'est une détection, l'escalier n'a pas bougé juste avant
+            then
+                if item.lastUpdate.minutesAgo > delayArmAlarmInMinute 
+                then
+                    dz.notify('Alarm Motion', dz.time.rawTime..': Motion detected by:'..item.name..'/'..item.state ,PRIORITY_HIGH,nil,nil,NSS_TELEGRAM,nil)
+                    if item.name  == 'Motion Veranda' 
+                    then
+                        talk(ALEXA_SPEAKVOL,"Maison", "Mouvement détecté à la véranda.")                        
+                    else
+                        talk(ALEXA_SPEAKVOL,"Maison", "Mouvement détecté au salon.")
+                    end
+                else 
+                    dz.log('Mvt détecté à nouveau par : ' .. item.name .. ' nouveau statut  '..item.state..'. Mais  <4 min. No talk', dz.LOG_INFO)
+                end
+            end 
+        end
+	end
+}
